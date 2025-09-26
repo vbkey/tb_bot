@@ -18,6 +18,11 @@ router = Router()
 class ProfileForm(StatesGroup):
     name = State()
 
+async def get_profile(user_id):
+    User = Query()
+    profile = await asyncio.to_thread(users_table.search, User.user_id == user_id)
+    return profile[0]
+
 async def save_profile(name, user_id):
     users_table.insert({"name": name, "user_id": user_id})
 
@@ -42,8 +47,12 @@ async def echo(message: Message):
     
 @router.message(F.text == "Профиль") 
 async def echo(message: Message, state: FSMContext):
-    await message.answer("Задайте никнейм:")
-    await state.set_state(ProfileForm.name)
+    profile = await get_profile(message.from_user.id)
+    if not profile: 
+        await message.answer("Задайте никнейм:")
+        await state.set_state(ProfileForm.name)
+    else:
+        await message.answer(f"Никнейм: {profile["name"]}\nКонец!")
 
 @router.message(ProfileForm.name) 
 async def echo(message: Message, state: FSMContext):
