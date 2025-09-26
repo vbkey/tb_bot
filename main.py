@@ -1,9 +1,13 @@
 import asyncio
 from config import *
+from tinydb import TinyDB, Query
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import Command  # <-- новый фильтр
+from aiogram.filters import Command
 
+db = TinyDB("db.json")
+users_table = db.table('users')
+admins_table = db.table('admins')
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
