@@ -30,7 +30,7 @@ async def get_profile(user_id):
     return profile
 
 async def add_profile(name, user_id):
-    await asyncio.to_thread(users_table.insert, {"name": name, "user_id": user_id})
+    await asyncio.to_thread(users_table.insert, {"name": name, "user_id": user_id, "is_block": False})
 
 async def save_profile(name, user_id):
     User = Query()
@@ -39,6 +39,14 @@ async def save_profile(name, user_id):
 async def get_users():
     users = await asyncio.to_thread(users_table.all)
     return users
+
+async def block_user(user_id):
+    User = Query()
+    await asyncio.to_thread(users_table.update, {"is_block": True}, User.user_id == user_id)
+
+async def unblock_user(user_id):
+    User = Query()
+    await asyncio.to_thread(users_table.update, {"is_block": False}, User.user_id == user_id)
 
 menu_btns = ReplyKeyboardMarkup(
     keyboard=[
@@ -65,6 +73,17 @@ admin_menu = InlineKeyboardMarkup(
         ]
     ]
 )
+
+def get_admin_user_kb(user_id):
+    admin_user = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Блокировать", callback_data=f"block_user:{user_id}"),
+                InlineKeyboardButton(text="Разлокировать", callback_data=f"unblock_user:{user_id}")
+            ]
+        ]
+    )
+    return admin_user
 
 profile_btns = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -97,7 +116,19 @@ async def echo(message: Message):
 async def echo(callback: CallbackQuery):
     users = await get_users()
     for user in users:
-        await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}')
+        await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=get_admin_user_kb(user["user_id"]))
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("block_user:"))
+async def echo(callback: CallbackQuery):
+    user_id = int(callback.data.split(":")[1])
+    await block_user(user_id)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("unblock_user:"))
+async def echo(callback: CallbackQuery):
+    user_id = int(callback.data.split(":")[1])
+    await unblock_user(user_id)
     await callback.answer()
     
 @router.message(F.text == "Профиль") 
