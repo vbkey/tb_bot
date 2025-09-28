@@ -24,10 +24,7 @@ class ProfileEdit(StatesGroup):
 async def get_profile(user_id):
     User = Query()
     profile = await asyncio.to_thread(users_table.search, User.user_id == user_id)
-    if profile:
-        return profile[0]
-    else:
-        False
+    return profile
 
 async def add_profile(name, user_id):
     await asyncio.to_thread(users_table.insert, {"name": name, "user_id": user_id})
@@ -87,7 +84,7 @@ async def echo(message: Message, state: FSMContext):
         await message.answer("Задайте никнейм:")
         await state.set_state(ProfileForm.name)
     else:
-        await message.answer(f"Никнейм: {profile["name"]}\nКонец!", reply_markup=profile_btns)
+        await message.answer(f"Никнейм: {profile[0]["name"]}\nКонец!", reply_markup=profile_btns)
 
 @router.callback_query(F.data == "edit_profile")
 async def echo(callback: CallbackQuery, state: FSMContext):
