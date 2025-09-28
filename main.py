@@ -21,6 +21,9 @@ class ProfileForm(StatesGroup):
 class ProfileEdit(StatesGroup):
     name = State()
 
+class Admin_functions(StatesGroup):
+    block_user = State()
+
 async def get_profile(user_id):
     User = Query()
     profile = await asyncio.to_thread(users_table.search, User.user_id == user_id)
@@ -32,6 +35,10 @@ async def add_profile(name, user_id):
 async def save_profile(name, user_id):
     User = Query()
     await asyncio.to_thread(users_table.update, {"name": name}, User.user_id == user_id)
+
+async def get_users():
+    users = await asyncio.to_thread(users_table.all)
+    return users
 
 menu_btns = ReplyKeyboardMarkup(
     keyboard=[
@@ -48,6 +55,15 @@ admin_menu_btns = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True,
     one_time_keyboard=True
+)
+
+admin_menu = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Пользователи", callback_data="show_users"),
+            InlineKeyboardButton(text="Поиск", callback_data="search_user")
+        ]
+    ]
 )
 
 profile_btns = InlineKeyboardMarkup(
@@ -75,7 +91,14 @@ async def start_command(message: Message):
 async def echo(message: Message):
     is_admin = await check_admin(message.from_user.id)
     if is_admin:
-        await message.answer("Админ меню")
+        await message.answer("Админ меню", reply_markup=admin_menu)
+
+@router.callback_query(F.data == "show_users")
+async def echo(callback: CallbackQuery):
+    users = await get_users()
+    for user in users:
+        await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}')
+    await callback.answer()
     
 @router.message(F.text == "Профиль") 
 async def echo(message: Message, state: FSMContext):
