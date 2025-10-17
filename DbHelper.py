@@ -7,6 +7,13 @@ users_table = db.table('users')
 admins_table = db.table('admins')
 
 #Functions
+async def check_block(user_id):
+    user = Query()
+    data = await asyncio.to_thread(users_table.search, user.user_id == user_id)
+    if data:
+        return data[0]["is_block"]
+    else:
+        return False
 async def check_admin(admin_id):
     admin = Query()
     data = await asyncio.to_thread(admins_table.search, admin.admin_id == admin_id)

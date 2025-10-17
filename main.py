@@ -1,12 +1,13 @@
 import asyncio
-from config import *
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+from aiogram import BaseMiddleware
 from Markups import *
 from DbHelper import *
+from config import *
 
 #Creating bot
 bot = Bot(token=API_TOKEN)
@@ -20,6 +21,16 @@ class ProfileEdit(StatesGroup):
     name = State()
 class Admin_functions(StatesGroup):
     block_user = State()
+
+#Middlewares
+class BlockCheckMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        if isinstance(event, Message):
+            if await check_block(event.from_user.id):
+                await event.answer("Пошли нахуй. Пожалуйста")
+                return
+        return await handler(event, data)
+dp.message.middleware(BlockCheckMiddleware())
 
 #Routes
 @router.message(Command("start"))
