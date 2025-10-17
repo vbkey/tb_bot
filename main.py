@@ -1,136 +1,55 @@
 import asyncio
 from config import *
-from tinydb import TinyDB, Query
 from aiogram import Bot, Dispatcher, Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+from Markups import *
+from DbHelper import *
 
-db = TinyDB("db.json")
-users_table = db.table('users')
-admins_table = db.table('admins')
-
+#Creating bot
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 router = Router()
 
+#States
 class ProfileForm(StatesGroup):
     name = State()
-
 class ProfileEdit(StatesGroup):
     name = State()
-
 class Admin_functions(StatesGroup):
     block_user = State()
 
-async def get_profile(user_id):
-    User = Query()
-    profile = await asyncio.to_thread(users_table.search, User.user_id == user_id)
-    return profile
-
-async def add_profile(name, user_id):
-    await asyncio.to_thread(users_table.insert, {"name": name, "user_id": user_id, "is_block": False})
-
-async def save_profile(name, user_id):
-    User = Query()
-    await asyncio.to_thread(users_table.update, {"name": name}, User.user_id == user_id)
-
-async def get_users():
-    users = await asyncio.to_thread(users_table.all)
-    return users
-
-async def block_user(user_id):
-    User = Query()
-    await asyncio.to_thread(users_table.update, {"is_block": True}, User.user_id == user_id)
-
-async def unblock_user(user_id):
-    User = Query()
-    await asyncio.to_thread(users_table.update, {"is_block": False}, User.user_id == user_id)
-
-menu_btns = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Профиль"), KeyboardButton(text="Помощь")]
-    ],
-    resize_keyboard=True,
-    one_time_keyboard=True
-)
-
-admin_menu_btns = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Админ меню")],
-        [KeyboardButton(text="Профиль"),KeyboardButton(text="Помощь")]
-    ],
-    resize_keyboard=True,
-    one_time_keyboard=True
-)
-
-admin_menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Пользователи", callback_data="show_users"),
-            InlineKeyboardButton(text="Поиск", callback_data="search_user")
-        ]
-    ]
-)
-
-def get_admin_user_kb(user_id):
-    admin_user = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Блокировать", callback_data=f"block_user:{user_id}"),
-                InlineKeyboardButton(text="Разлокировать", callback_data=f"unblock_user:{user_id}")
-            ]
-        ]
-    )
-    return admin_user
-
-profile_btns = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="Изменить", callback_data="edit_profile")]
-    ]
-)
-
-async def check_admin(admin_id):
-    admin = Query()
-    data = await asyncio.to_thread(admins_table.search, admin.admin_id == admin_id)
-    if data:
-        return True
-    return False
-# --- Хэндлеры ---
+#Routes
 @router.message(Command("start"))
 async def start_command(message: Message):
     is_admin = await check_admin(message.from_user.id)
     if is_admin:
-        await message.answer("Заготовка бота", reply_markup=admin_menu_btns)
+        await message.answer("Заготовка бота", reply_markup=admin_main_menu)
     else:
-        await message.answer("Заготовка бота", reply_markup=menu_btns)
-    
+        await message.answer("Заготовка бота", reply_markup=main_menu)
 @router.message(F.text == "Админ меню") 
 async def echo(message: Message):
     is_admin = await check_admin(message.from_user.id)
     if is_admin:
         await message.answer("Админ меню", reply_markup=admin_menu)
-
 @router.callback_query(F.data == "show_users")
 async def echo(callback: CallbackQuery):
     users = await get_users()
     for user in users:
-        await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=get_admin_user_kb(user["user_id"]))
+        await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=get_user_manipulate_menu(user["user_id"]))
     await callback.answer()
-
 @router.callback_query(F.data.startswith("block_user:"))
 async def echo(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
     await block_user(user_id)
     await callback.answer()
-
 @router.callback_query(F.data.startswith("unblock_user:"))
 async def echo(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
     await unblock_user(user_id)
     await callback.answer()
-    
 @router.message(F.text == "Профиль") 
 async def echo(message: Message, state: FSMContext):
     profile = await get_profile(message.from_user.id)
@@ -138,14 +57,12 @@ async def echo(message: Message, state: FSMContext):
         await message.answer("Задайте никнейм:")
         await state.set_state(ProfileForm.name)
     else:
-        await message.answer(f"Никнейм: {profile[0]["name"]}\nКонец!", reply_markup=profile_btns)
-
+        await message.answer(f"Никнейм: {profile[0]["name"]}\nКонец!", reply_markup=profile_menu)
 @router.callback_query(F.data == "edit_profile")
 async def echo(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Задайте никнейм:")
     await state.set_state(ProfileEdit.name)
     await callback.answer()
-
 @router.message(ProfileEdit.name) 
 async def echo(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
@@ -153,7 +70,6 @@ async def echo(message: Message, state: FSMContext):
     await save_profile(user_data["name"], message.from_user.id)
     await message.answer('Данные сохраненны!')
     await state.clear()
-
 @router.message(ProfileForm.name) 
 async def echo(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
@@ -161,15 +77,13 @@ async def echo(message: Message, state: FSMContext):
     await add_profile(user_data["name"], message.from_user.id)
     await message.answer('Данные сохраненны!')
     await state.clear()
-
 @router.message(F.text == "Помощь") 
 async def echo(message: Message):
     await message.answer("Помощь")
 
-# --- Запуск ---
+#Running bot
 async def main():
     dp.include_router(router)
     await dp.start_polling(bot)
-
 if __name__ == "__main__":
     asyncio.run(main())
