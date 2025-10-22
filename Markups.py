@@ -24,16 +24,16 @@ admin_menu = InlineKeyboardMarkup(
     ]
 )
 async def get_user_manipulate_menu(user_id):
-    user_manipulate_menu = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Блокировать", callback_data=f"block_user:{user_id}"),
-                InlineKeyboardButton(text="Разлокировать", callback_data=f"unblock_user:{user_id}")
-            ]
-        ]
-    )
+    result_btns = []
+    if await check_block(user_id):
+        result_btns.append(InlineKeyboardButton(text="Разлокировать", callback_data=f"unblock_user:{user_id}"))
+    else:
+        result_btns.append(InlineKeyboardButton(text="Блокировать", callback_data=f"block_user:{user_id}"))
     if not await check_admin(user_id):
-        user_manipulate_menu.inline_keyboard[0].append(InlineKeyboardButton(text="Выдать права", callback_data=f"give_admin:{user_id}"))
+        result_btns.append(InlineKeyboardButton(text="Выдать права", callback_data=f"give_admin:{user_id}"))
+    user_manipulate_menu = InlineKeyboardMarkup(
+        inline_keyboard=[[*result_btns]]
+    )
     return user_manipulate_menu
 profile_menu = InlineKeyboardMarkup(
     inline_keyboard=[

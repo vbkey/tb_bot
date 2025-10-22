@@ -44,7 +44,7 @@ async def start_command(message: Message):
 async def echo(message: Message):
     is_admin = await check_admin(message.from_user.id)
     if is_admin:
-        await message.answer("Админ меню", reply_markup=admin_menu)
+        await message.answer("Используйте с умом Мистер Админ!", reply_markup=admin_menu)
 @router.callback_query(F.data == "show_users")
 async def echo(callback: CallbackQuery):
     users = await get_users()
@@ -56,16 +56,22 @@ async def echo(callback: CallbackQuery):
 async def echo(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
     await block_user(user_id)
+    new_markup = await get_user_manipulate_menu(user_id)
+    await callback.message.edit_reply_markup(reply_markup=new_markup)
     await callback.answer()
 @router.callback_query(F.data.startswith("unblock_user:"))
 async def echo(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
     await unblock_user(user_id)
+    new_markup = await get_user_manipulate_menu(user_id)
+    await callback.message.edit_reply_markup(reply_markup=new_markup)
     await callback.answer()
 @router.callback_query(F.data.startswith("give_admin:"))
 async def echo(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
     await give_admin(user_id)
+    new_markup = await get_user_manipulate_menu(user_id)
+    await callback.message.edit_reply_markup(reply_markup=new_markup)
     await callback.answer()
 @router.message(F.text == "Профиль") 
 async def echo(message: Message, state: FSMContext):
