@@ -1,5 +1,5 @@
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-
+from DbHelper import *
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Профиль"), KeyboardButton(text="Помощь")]
@@ -23,7 +23,7 @@ admin_menu = InlineKeyboardMarkup(
         ]
     ]
 )
-def get_user_manipulate_menu(user_id):
+async def get_user_manipulate_menu(user_id):
     user_manipulate_menu = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -32,6 +32,8 @@ def get_user_manipulate_menu(user_id):
             ]
         ]
     )
+    if not await check_admin(user_id):
+        user_manipulate_menu.inline_keyboard[0].append(InlineKeyboardButton(text="Выдать права", callback_data=f"give_admin:{user_id}"))
     return user_manipulate_menu
 profile_menu = InlineKeyboardMarkup(
     inline_keyboard=[

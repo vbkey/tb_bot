@@ -38,3 +38,5 @@ async def block_user(user_id):
 async def unblock_user(user_id):
     User = Query()
     await asyncio.to_thread(users_table.update, {"is_block": False}, User.user_id == user_id)
+async def give_admin(user_id):
+    await asyncio.to_thread(admins_table.insert, {"admin_id": user_id})

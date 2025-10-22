@@ -49,7 +49,8 @@ async def echo(message: Message):
 async def echo(callback: CallbackQuery):
     users = await get_users()
     for user in users:
-        await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=get_user_manipulate_menu(user["user_id"]))
+        markup = await get_user_manipulate_menu(user["user_id"])
+        await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=markup)
     await callback.answer()
 @router.callback_query(F.data.startswith("block_user:"))
 async def echo(callback: CallbackQuery):
@@ -60,6 +61,11 @@ async def echo(callback: CallbackQuery):
 async def echo(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
     await unblock_user(user_id)
+    await callback.answer()
+@router.callback_query(F.data.startswith("give_admin:"))
+async def echo(callback: CallbackQuery):
+    user_id = int(callback.data.split(":")[1])
+    await give_admin(user_id)
     await callback.answer()
 @router.message(F.text == "Профиль") 
 async def echo(message: Message, state: FSMContext):
