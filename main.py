@@ -15,8 +15,6 @@ dp = Dispatcher()
 router = Router()
 
 #States
-class ProfileForm(StatesGroup):
-    name = State()
 class ProfileEdit(StatesGroup):
     name = State()
 class Admin_functions(StatesGroup):
@@ -30,11 +28,20 @@ class BlockCheckMiddleware(BaseMiddleware):
                 await event.answer("Пошли нахуй. Пожалуйста")
                 return
         return await handler(event, data)
+class ProfileCheckMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        state: FSMContext = data["state"]
+        if isinstance(event, Message):
+            profile = await get_profile(event.from_user.id)
+            if not profile:
+                await add_profile(event.from_user.username, event.from_user.id)
+        return await handler(event, data)
 dp.message.middleware(BlockCheckMiddleware())
+dp.message.middleware(ProfileCheckMiddleware())
 
 #Routes
 @router.message(Command("start"))
-async def start_command(message: Message):
+async def start_command(message: Message, state: FSMContext):
     is_admin = await check_admin(message.from_user.id)
     if is_admin:
         await message.answer("Заготовка бота", reply_markup=admin_main_menu)
@@ -74,13 +81,9 @@ async def echo(callback: CallbackQuery):
     await callback.message.edit_reply_markup(reply_markup=new_markup)
     await callback.answer()
 @router.message(F.text == "Профиль") 
-async def echo(message: Message, state: FSMContext):
+async def echo(message: Message):
     profile = await get_profile(message.from_user.id)
-    if not profile: 
-        await message.answer("Задайте никнейм:")
-        await state.set_state(ProfileForm.name)
-    else:
-        await message.answer(f"Никнейм: {profile[0]["name"]}\nКонец!", reply_markup=profile_menu)
+    await message.answer(f"Никнейм: {profile[0]["name"]}\nКонец!", reply_markup=profile_menu)
 @router.callback_query(F.data == "edit_profile")
 async def echo(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Задайте никнейм:")
@@ -91,13 +94,6 @@ async def echo(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     user_data = await state.get_data()
     await save_profile(user_data["name"], message.from_user.id)
-    await message.answer('Данные сохраненны!')
-    await state.clear()
-@router.message(ProfileForm.name) 
-async def echo(message: Message, state: FSMContext):
-    await state.update_data(name=message.text)
-    user_data = await state.get_data()
-    await add_profile(user_data["name"], message.from_user.id)
     await message.answer('Данные сохраненны!')
     await state.clear()
 @router.message(F.text == "Помощь") 
