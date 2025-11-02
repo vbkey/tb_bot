@@ -57,7 +57,7 @@ async def echo(message: Message):
 @router.callback_query(F.data == "show_users")
 async def echo(callback: CallbackQuery, state: FSMContext):
     users = await get_users()
-    for user in users:
+    for user in users[:10]:
         markup = await get_user_manipulate_menu(user["user_id"])
         await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=markup)
     await callback.answer()
@@ -69,7 +69,7 @@ async def echo(callback: CallbackQuery, state: FSMContext):
 @router.message(Users.search) 
 async def echo(message: Message, state: FSMContext):
     users = await search_user(message.text)
-    for user in users:
+    for user in users[:10]:
         markup = await get_user_manipulate_menu(user["user_id"])
         await message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=markup)
     await state.clear()
