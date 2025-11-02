@@ -1,5 +1,6 @@
 import asyncio
-from tinydb import TinyDB, Query
+import re
+from tinydb import TinyDB, Query, where
 
 #Creating db
 db = TinyDB("db.json")
@@ -40,3 +41,8 @@ async def unblock_user(user_id):
     await asyncio.to_thread(users_table.update, {"is_block": False}, User.user_id == user_id)
 async def give_admin(user_id):
     await asyncio.to_thread(admins_table.insert, {"admin_id": user_id})
+async def search_user(key):
+    User = Query()
+    matches = where("name").test(lambda x: key.lower() in x.lower())
+    users = await asyncio.to_thread(users_table.search, matches)
+    return users

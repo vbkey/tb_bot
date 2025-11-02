@@ -19,6 +19,8 @@ class ProfileEdit(StatesGroup):
     name = State()
 class Admin_functions(StatesGroup):
     block_user = State()
+class Users(StatesGroup):
+    search = State()
 
 #Middlewares
 class BlockCheckMiddleware(BaseMiddleware):
@@ -53,12 +55,24 @@ async def echo(message: Message):
     if is_admin:
         await message.answer("Используйте с умом Мистер Админ!", reply_markup=admin_menu)
 @router.callback_query(F.data == "show_users")
-async def echo(callback: CallbackQuery):
+async def echo(callback: CallbackQuery, state: FSMContext):
     users = await get_users()
     for user in users:
         markup = await get_user_manipulate_menu(user["user_id"])
         await callback.message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=markup)
     await callback.answer()
+@router.callback_query(F.data == "search_user")
+async def echo(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(Users.search)
+    await callback.message.answer('Введите имя')
+    await callback.answer()
+@router.message(Users.search) 
+async def echo(message: Message, state: FSMContext):
+    users = await search_user(message.text)
+    for user in users:
+        markup = await get_user_manipulate_menu(user["user_id"])
+        await message.answer(f'Имя: {user["name"]} ID: {user["user_id"]}', reply_markup=markup)
+    await state.clear()
 @router.callback_query(F.data.startswith("block_user:"))
 async def echo(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
